@@ -1,8 +1,7 @@
-// var screen = document.getElementById("content");
-var output = document.getElementById('output-lines');
-var screen = document.getElementById("canvas");
-// var output = document.getElementById('log');
-var ongoingTouches = [];
+let output = document.getElementById('output-lines');
+let screen = document.getElementById("canvas");
+let ongoingTouches = [];
+let presstimer = null;
 
 function startup() {
     screen.addEventListener("touchstart", handleStart, false);
@@ -14,30 +13,34 @@ function startup() {
 function handleStart(evt) {
     evt.preventDefault();
     log("Touch.event: start");
-    var ctx = screen.getContext("2d");
-    var touches = evt.changedTouches;
+    let ctx = screen.getContext("2d");
+    let touches = evt.changedTouches;
 
-    for (var i = 0; i < touches.length; i++) {
+    for (let i = 0; i < touches.length; i++) {
         // log("touchstart:" + i + "...");
         ongoingTouches.push(copyTouch(touches[i]));
-        var color = colorForTouch(touches[i]);
+        let color = colorForTouch(touches[i]);
         ctx.beginPath();
         ctx.arc(touches[i].pageX, touches[i].pageY, 4, 0, 2 * Math.PI, false);  // a circle at the start
         ctx.fillStyle = color;
         ctx.fill();
         // log("touchstart:" + i + ".");
     }
+
+    presstimer = setTimeout(function() {
+        log("Long press detected");
+    }, 1000);
 }
 
 function handleEnd(evt) {
     evt.preventDefault();
     log("Touch.event: end");
-    var ctx = screen.getContext("2d");
-    var touches = evt.changedTouches;
+    let ctx = screen.getContext("2d");
+    let touches = evt.changedTouches;
 
-    for (var i = 0; i < touches.length; i++) {
-        var color = colorForTouch(touches[i]);
-        var idx = ongoingTouchIndexById(touches[i].identifier);
+    for (let i = 0; i < touches.length; i++) {
+        let color = colorForTouch(touches[i]);
+        let idx = ongoingTouchIndexById(touches[i].identifier);
 
         if (idx >= 0) {
             ctx.lineWidth = 4;
@@ -51,28 +54,31 @@ function handleEnd(evt) {
             log("Can't figure out which touch to end");
         }
     }
+
+    clearPressTimeout();
 }
 
 function handleCancel(evt) {
     evt.preventDefault();
     log("Touch.event: cancel");
-    var touches = evt.changedTouches;
+    let touches = evt.changedTouches;
 
-    for (var i = 0; i < touches.length; i++) {
-        var idx = ongoingTouchIndexById(touches[i].identifier);
+    for (let i = 0; i < touches.length; i++) {
+        let idx = ongoingTouchIndexById(touches[i].identifier);
         ongoingTouches.splice(idx, 1);  // remove it; we're done
     }
 }
 
 function handleMove(evt) {
     evt.preventDefault();
-    var ctx = screen.getContext("2d");
-    log("Touch.event: move");
-    var touches = evt.changedTouches;
 
-    for (var i = 0; i < touches.length; i++) {
-        var color = colorForTouch(touches[i]);
-        var idx = ongoingTouchIndexById(touches[i].identifier);
+    let ctx = screen.getContext("2d");
+    log("Touch.event: move");
+    let touches = evt.changedTouches;
+
+    for (let i = 0; i < touches.length; i++) {
+        let color = colorForTouch(touches[i]);
+        let idx = ongoingTouchIndexById(touches[i].identifier);
 
         if (idx >= 0) {
             log("Continuing touch " + idx);
@@ -90,17 +96,20 @@ function handleMove(evt) {
         } else {
             log("Can't figure out which touch to continue");
         }
+
+
+        clearPressTimeout();
     }
 }
 
 function colorForTouch(touch) {
-    var r = touch.identifier % 16;
-    var g = Math.floor(touch.identifier / 3) % 16;
-    var b = Math.floor(touch.identifier / 7) % 16;
+    let r = touch.identifier % 16;
+    let g = Math.floor(touch.identifier / 3) % 16;
+    let b = Math.floor(touch.identifier / 7) % 16;
     r = r.toString(16); // make it a hex digit
     g = g.toString(16); // make it a hex digit
     b = b.toString(16); // make it a hex digit
-    var color = "#" + r + g + b;
+    let color = "#" + r + g + b;
     log("Color for touch with identifier " + touch.identifier + ": " + color);
     return color;
 }
@@ -110,8 +119,8 @@ function copyTouch({ identifier, pageX, pageY }) {
 }
 
 function ongoingTouchIndexById(idToFind) {
-    for (var i = 0; i < ongoingTouches.length; i++) {
-        var id = ongoingTouches[i].identifier;
+    for (let i = 0; i < ongoingTouches.length; i++) {
+        let id = ongoingTouches[i].identifier;
 
         if (id == idToFind) {
             return i;
@@ -120,9 +129,15 @@ function ongoingTouchIndexById(idToFind) {
     return -1;    // Not found
 }
 
+function clearPressTimeout(){
+    if (presstimer !== null) {
+        clearTimeout(presstimer);
+        presstimer = null;
+    }
+}
+
 function log(msg) {
     output.innerHTML += msg + "<br>";
 }
-
 
 document.addEventListener("DOMContentLoaded", startup);
